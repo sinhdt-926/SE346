@@ -6,26 +6,73 @@ import {
   TextInput,
   TouchableOpacity,
 } from "react-native";
+import { useState } from "react";
 
-export default function Register() {
+export default function Register({ navigation, onRegister }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [error, setError] = useState("");
+
+  const handleCreate = () => {
+    if (!email.trim() || !password || !confirmPwd) {
+      setError("Vui lòng điền đầy đủ thông tin.");
+      return;
+    }
+    if (password !== confirmPwd) {
+      setError("Mật khẩu và xác nhận mật khẩu không khớp.");
+      return;
+    }
+    onRegister({ email: email.trim(), password, name: name.trim() });
+    setError("");
+    navigation.navigate("Login");
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>REGISTER</Text>
 
       <View style={styles.form}>
         <Text style={styles.label}>Name</Text>
-        <TextInput style={styles.input} placeholder="test" />
+        <TextInput
+          style={styles.input}
+          placeholder="test"
+          value={name}
+          onChangeText={setName}
+        />
 
         <Text style={styles.label}>Email</Text>
-        <TextInput style={styles.input} placeholder="test@mail.com" />
+        <TextInput
+          style={styles.input}
+          placeholder="test@mail.com"
+          value={email}
+          onChangeText={setEmail}
+        />
 
         <Text style={styles.label}>Password</Text>
-        <TextInput style={styles.input} placeholder="******" secureTextEntry />
+        <TextInput
+          style={styles.input}
+          placeholder="******"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
 
         <Text style={styles.label}>Confirm password</Text>
-        <TextInput style={styles.input} placeholder="******" secureTextEntry />
+        <TextInput
+          style={styles.input}
+          placeholder="******"
+          secureTextEntry
+          value={confirmPwd}
+          onChangeText={setConfirmPwd}
+        />
 
-        <TouchableOpacity style={styles.button}>
+        {error ? (
+          <Text style={{ color: "red", marginBottom: 10 }}>{error}</Text>
+        ) : null}
+
+        <TouchableOpacity style={styles.button} onPress={handleCreate}>
           <Text style={styles.buttonText}>Create</Text>
         </TouchableOpacity>
       </View>
@@ -67,16 +114,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
-  forgot: {
-    fontSize: 12,
-    color: "gray",
-    marginBottom: 20,
-  },
-
   button: {
     width: "50%",
-    borderWidth: 1,
-    borderColor: "transparent",
     backgroundColor: "#53b85a",
     padding: 10,
     alignItems: "center",
@@ -87,7 +126,12 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: 16,
-    fontFamily: "Arial",
     fontWeight: "bold",
+  },
+
+  back: {
+    textAlign: "center",
+    color: "#007AFF",
+    fontSize: 14,
   },
 });
