@@ -4,6 +4,7 @@ import Info from "./Info";
 import HomeScreen from "./HomeScreen";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createDrawerNavigator } from "@react-navigation/drawer";
 import {
   StyleSheet,
   Text,
@@ -12,67 +13,76 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useState } from "react";
+import { loginUserDB, setCurrentUser } from "./database";
 
 const Stack = createNativeStackNavigator();
+const Drawer = createDrawerNavigator();
 
 export default function Login() {
-  const [accounts, setAccounts] = useState([
-    { email: "test@mail.com", password: "123456" },
-    { email: "admin@mail.com", password: "admin123" },
-    { email: "user", password: "pass" },
-  ]);
-
-  const handleLogin = (email, password) => {
-    return accounts.some(
-      (acc) => acc.email === email.trim() && acc.password === password,
-    );
-  };
-
-  const handleRegister = (newAccount) => {
-    setAccounts((prev) => [...prev, newAccount]);
-  };
-
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name="Login">
-          {(props) => <LoginScreen {...props} onLogin={handleLogin} />}
-        </Stack.Screen>
-        <Stack.Screen name="Register">
-          {(props) => <Register {...props} onRegister={handleRegister} />}
-        </Stack.Screen>
-        <Stack.Screen name="Info" component={Info} />
+        <Stack.Screen name="LoginScreen" component={LoginScreen} />
+        <Stack.Screen name="Register" component={Register} />
+        <Stack.Screen
+          name="MainApp"
+          component={DrawerNavigator}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
 
-function LoginScreen({ navigation, onLogin }) {
+function DrawerNavigator() {
+  return (
+    <Drawer.Navigator>
+      <Drawer.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ title: "Home" }}
+      />
+      <Drawer.Screen
+        name="Profile"
+        component={Info}
+        options={{ title: "Profile" }}
+      />
+    </Drawer.Navigator>
+  );
+}
+
+function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const doSignIn = () => {
-    const ok = onLogin(email, password);
-    if (ok) {
+  const doSignIn = async () => {
+    if (!email || !password) {
+      setError("Please enter both email and password.");
+      return;
+    }
+
+    const user = await loginUserDB(email.trim(), password);
+    if (user) {
       setError("");
-      navigation.navigate("HomeScreen");
+      setCurrentUser(user);
+      navigation.navigate("MainApp");
     } else {
-      setError("Email/Username hoặc mật khẩu không đúng.");
+      setError("Invalid email or password.");
     }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>LOGIN</Text>
-
       <View style={styles.form}>
-        <Text style={styles.label}>Email/Username</Text>
+        <Text style={styles.label}>Email</Text>
         <TextInput
           style={styles.input}
-          placeholder="test@mail.com"
+          placeholder="test@gmail.com"
           value={email}
           onChangeText={setEmail}
+          autoCapitalize="none"
         />
 
         <Text style={styles.label}>Password</Text>
@@ -92,7 +102,6 @@ function LoginScreen({ navigation, onLogin }) {
           <TouchableOpacity>
             <Text style={styles.forgot}>Forgot password?</Text>
           </TouchableOpacity>
-
           <TouchableOpacity onPress={() => navigation.navigate("Register")}>
             <Text style={styles.label}>Register</Text>
           </TouchableOpacity>
@@ -102,7 +111,6 @@ function LoginScreen({ navigation, onLogin }) {
           <Text style={styles.buttonText}>Sign in</Text>
         </TouchableOpacity>
       </View>
-
       <StatusBar style="auto" />
     </View>
   );

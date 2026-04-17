@@ -5,18 +5,20 @@ import {
   View,
   TextInput,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { useState } from "react";
+import { registerUserDB } from "./database";
 
-export default function Register({ navigation, onRegister }) {
+export default function Register({ navigation }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
   const [error, setError] = useState("");
 
-  const handleCreate = () => {
-    if (!email.trim() || !password || !confirmPwd) {
+  const handleCreate = async () => {
+    if (!email.trim() || !password || !confirmPwd || !name.trim()) {
       setError("Vui lòng điền đầy đủ thông tin.");
       return;
     }
@@ -24,15 +26,21 @@ export default function Register({ navigation, onRegister }) {
       setError("Mật khẩu và xác nhận mật khẩu không khớp.");
       return;
     }
-    onRegister({ email: email.trim(), password, name: name.trim() });
-    setError("");
-    navigation.navigate("Login");
+
+    const result = await registerUserDB(name.trim(), email.trim(), password);
+    if (result.success) {
+      setError("");
+      Alert.alert("Thành công", "Đăng ký thành công!", [
+        { text: "OK", onPress: () => navigation.navigate("LoginScreen") },
+      ]);
+    } else {
+      setError(result.error);
+    }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>REGISTER</Text>
-
       <View style={styles.form}>
         <Text style={styles.label}>Name</Text>
         <TextInput
@@ -48,6 +56,7 @@ export default function Register({ navigation, onRegister }) {
           placeholder="test@mail.com"
           value={email}
           onChangeText={setEmail}
+          autoCapitalize="none"
         />
 
         <Text style={styles.label}>Password</Text>
@@ -76,7 +85,6 @@ export default function Register({ navigation, onRegister }) {
           <Text style={styles.buttonText}>Create</Text>
         </TouchableOpacity>
       </View>
-
       <StatusBar style="auto" />
     </View>
   );
@@ -89,22 +97,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    marginBottom: 40,
-  },
-
-  form: {
-    width: "80%",
-  },
-
-  label: {
-    fontSize: 14,
-    marginBottom: 5,
-  },
-
+  title: { fontSize: 32, fontWeight: "bold", marginBottom: 40 },
+  form: { width: "80%" },
+  label: { fontSize: 14, marginBottom: 5 },
   input: {
     borderWidth: 1,
     borderColor: "#999",
@@ -113,7 +108,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "#fff",
   },
-
   button: {
     width: "50%",
     backgroundColor: "#53b85a",
@@ -122,16 +116,5 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     borderRadius: 10,
   },
-
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-
-  back: {
-    textAlign: "center",
-    color: "#007AFF",
-    fontSize: 14,
-  },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
 });
