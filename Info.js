@@ -10,12 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { useState, useEffect } from "react";
-import {
-  currentUser,
-  getUserInfoDB,
-  updateUserInfoDB,
-  setCurrentUser,
-} from "./database";
+import { currentUser, setCurrentUser } from "./api";
 
 export default function Info({ navigation }) {
   const [userInfo, setUserInfo] = useState({
@@ -27,28 +22,19 @@ export default function Info({ navigation }) {
   });
 
   useEffect(() => {
-    const loadInfo = async () => {
-      if (currentUser) {
-        const data = await getUserInfoDB(currentUser.id);
-        if (data) {
-          setUserInfo(data);
-        }
-      }
-    };
-    loadInfo();
+    if (currentUser) {
+      setUserInfo({
+        name: currentUser.name || "User",
+        email: currentUser.email || "",
+        address: "",
+        avatarUrl: "",
+        description: "",
+      });
+    }
   }, []);
 
   const handleSave = async () => {
-    if (currentUser) {
-      await updateUserInfoDB(
-        currentUser.id,
-        userInfo.name,
-        userInfo.address,
-        userInfo.avatarUrl,
-        userInfo.description,
-      );
-      Alert.alert("Thành công", "Cập nhật thông tin thành công!");
-    }
+    Alert.alert("");
   };
 
   const handleLogout = () => {
@@ -64,7 +50,7 @@ export default function Info({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{userInfo.name || "User"}</Text>
+        <Text style={styles.title}>{userInfo.name}</Text>
         <Image
           style={styles.avatar}
           source={
@@ -82,28 +68,24 @@ export default function Info({ navigation }) {
           value={userInfo.name}
           onChangeText={(text) => setUserInfo({ ...userInfo, name: text })}
         />
-
         <Text style={styles.label}>Email</Text>
         <TextInput
           style={[styles.input, { backgroundColor: "#e9ecef" }]}
           value={userInfo.email}
           editable={false}
         />
-
         <Text style={styles.label}>Address</Text>
         <TextInput
           style={styles.input}
           value={userInfo.address}
           onChangeText={(text) => setUserInfo({ ...userInfo, address: text })}
         />
-
         <Text style={styles.label}>Avatar URL</Text>
         <TextInput
           style={styles.input}
           value={userInfo.avatarUrl}
           onChangeText={(text) => setUserInfo({ ...userInfo, avatarUrl: text })}
         />
-
         <Text style={styles.label}>Description</Text>
         <TextInput
           style={styles.input}
@@ -124,7 +106,6 @@ export default function Info({ navigation }) {
         >
           <Text style={styles.buttonText}>Save</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={[
             styles.button,

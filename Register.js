@@ -8,7 +8,7 @@ import {
   Alert,
 } from "react-native";
 import { useState } from "react";
-import { registerUserDB } from "./database";
+import { registerAPI } from "./api"; // Đổi import
 
 export default function Register({ navigation }) {
   const [name, setName] = useState("");
@@ -27,14 +27,14 @@ export default function Register({ navigation }) {
       return;
     }
 
-    const result = await registerUserDB(name.trim(), email.trim(), password);
-    if (result.success) {
+    try {
+      await registerAPI(email.trim(), password, name.trim(), "");
       setError("");
       Alert.alert("Thành công", "Đăng ký thành công!", [
         { text: "OK", onPress: () => navigation.navigate("LoginScreen") },
       ]);
-    } else {
-      setError(result.error);
+    } catch (err) {
+      setError("Đăng ký thất bại. Có thể email đã tồn tại hoặc sai định dạng.");
     }
   };
 
@@ -49,7 +49,6 @@ export default function Register({ navigation }) {
           value={name}
           onChangeText={setName}
         />
-
         <Text style={styles.label}>Email</Text>
         <TextInput
           style={styles.input}
@@ -58,7 +57,6 @@ export default function Register({ navigation }) {
           onChangeText={setEmail}
           autoCapitalize="none"
         />
-
         <Text style={styles.label}>Password</Text>
         <TextInput
           style={styles.input}
@@ -67,7 +65,6 @@ export default function Register({ navigation }) {
           value={password}
           onChangeText={setPassword}
         />
-
         <Text style={styles.label}>Confirm password</Text>
         <TextInput
           style={styles.input}

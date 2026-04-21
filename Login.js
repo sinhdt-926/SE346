@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useState } from "react";
-import { loginUserDB, setCurrentUser } from "./database";
+import { loginAPI, setCurrentUser } from "./api";
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -62,12 +62,13 @@ function LoginScreen({ navigation }) {
       return;
     }
 
-    const user = await loginUserDB(email.trim(), password);
-    if (user) {
+    try {
+      const data = await loginAPI(email.trim(), password);
       setError("");
-      setCurrentUser(user);
+      setCurrentUser({ email: email.trim(), name: "Người dùng" });
       navigation.navigate("MainApp");
-    } else {
+    } catch (err) {
+      console.log("Login error:", err.message);
       setError("Invalid email or password.");
     }
   };
@@ -84,7 +85,6 @@ function LoginScreen({ navigation }) {
           onChangeText={setEmail}
           autoCapitalize="none"
         />
-
         <Text style={styles.label}>Password</Text>
         <TextInput
           style={styles.input}

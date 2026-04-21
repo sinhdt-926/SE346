@@ -5,15 +5,10 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
+  Image,
 } from "react-native";
 import { useState, useEffect } from "react";
-import {
-  getPostsDB,
-  addPostDB,
-  getCommentsByPostDB,
-  addCommentDB,
-  currentUser,
-} from "./database";
+import { getPostsAPI, createPostAPI, currentUser } from "./api";
 
 const getTimeAgo = (dateString) => {
   if (!dateString) return "";
@@ -21,78 +16,36 @@ const getTimeAgo = (dateString) => {
   const now = new Date();
   const seconds = Math.floor((now - past) / 1000);
 
-  if (seconds < 60) return "just now";
+  if (seconds < 60) return "vừa xong";
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} minutes ago`;
+  if (minutes < 60) return `${minutes} phút trước`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hours ago`;
+  if (hours < 24) return `${hours} giờ trước`;
   const days = Math.floor(hours / 24);
-  return `${days} days ago`;
+  return `${days} ngày trước`;
 };
 
 const PostCard = ({ item }) => {
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState("");
-
-  const loadComments = async () => {
-    const c = await getCommentsByPostDB(item.id);
-    setComments(c);
-  };
-
-  useEffect(() => {
-    loadComments();
-  }, []);
-
-  const handleAddComment = async () => {
-    if (!newComment.trim()) return;
-    const author = currentUser ? currentUser.name : "Anonymous";
-
-    const exactTime = new Date().toISOString();
-
-    await addCommentDB(item.id, author, newComment.trim(), exactTime);
-    setNewComment("");
-    await loadComments();
-  };
-
   return (
     <View style={styles.postCard}>
       <View style={styles.postMeta}>
-        <Text style={styles.authorText}>{item.author}</Text>
-        <Text style={styles.dateText}>{item.date.split("T")[0]}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Image
+            source={require("./assets/images.png")}
+            style={styles.authorAvatar}
+          />
+          <Text style={styles.authorText}>
+            {item.creator_name || "Unknown User"}
+          </Text>
+        </View>
+        <Text style={styles.dateText}>
+          {item.created_at ? getTimeAgo(item.created_at) : "N/A"}
+        </Text>
       </View>
 
       <Text style={styles.postTitle}>{item.title}</Text>
 
       <Text style={styles.postDescription}>{item.description}</Text>
-
-      <View style={styles.commentSection}>
-        <Text style={styles.commentHeader}>Comment</Text>
-        {comments.map((c) => (
-          <View key={c.id.toString()} style={styles.commentItem}>
-            <Text style={styles.commentBody}>
-              <Text style={styles.commentAuthor}>{c.author}: </Text>
-              <Text style={styles.commentText}>{c.content}</Text>
-            </Text>
-
-            <Text style={styles.commentTime}>{getTimeAgo(c.date)}</Text>
-          </View>
-        ))}
-
-        <View style={styles.commentInputRow}>
-          <TextInput
-            style={styles.commentInput}
-            placeholder="Write a comment..."
-            value={newComment}
-            onChangeText={setNewComment}
-          />
-          <TouchableOpacity
-            style={styles.commentBtn}
-            onPress={handleAddComment}
-          >
-            <Text style={styles.commentBtnText}>Send</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
     </View>
   );
 };
@@ -103,7 +56,7 @@ const HomeScreen = () => {
   const [content, setContent] = useState("");
 
   const loadPosts = async () => {
-    const p = await getPostsDB();
+    const p = await getPostsAPI();
     setPosts(p);
   };
 
@@ -114,29 +67,31 @@ const HomeScreen = () => {
   const handlePost = async () => {
     if (!title.trim() || !content.trim()) return;
 
-    const author = currentUser ? currentUser.name : "Anonymous";
-    const date = new Date().toISOString();
-
-    await addPostDB(title.trim(), content.trim(), author, date);
-    await loadPosts();
-    setTitle("");
-    setContent("");
+    try {
+      const email = currentUser ? currentUser.email : "anonymous@mail.com";
+      await createPostAPI(title.trim(), content.trim(), email);
+      await loadPosts();
+      setTitle("");
+      setContent("");
+    } catch (err) {
+      alert("Đăng bài thất bại!");
+    }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.headerTitle}>Create New Post</Text>
+      <Text style={styles.headerTitle}>Tạo bài viết mới</Text>
 
       <View style={styles.createPostBox}>
         <TextInput
           style={styles.inputTitle}
-          placeholder="Title..."
+          placeholder="Tiêu đề..."
           value={title}
           onChangeText={setTitle}
         />
         <TextInput
           style={styles.inputContent}
-          placeholder="What's on your mind?"
+          placeholder="Bạn đang nghĩ gì?"
           multiline={true}
           numberOfLines={4}
           value={content}
@@ -144,12 +99,12 @@ const HomeScreen = () => {
         />
         <TouchableOpacity style={styles.button} onPress={handlePost}>
           <Text style={{ color: "#fff", fontSize: 16, fontWeight: "500" }}>
-            Post
+            Đăng bài
           </Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.headerTitle}>New Feed</Text>
+      <Text style={styles.headerTitle}>Bảng tin</Text>
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id.toString()}
@@ -176,7 +131,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: "#1c1e21",
   },
-
   createPostBox: {
     backgroundColor: "#fff",
     padding: 15,
@@ -209,7 +163,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
   },
-
   postCard: {
     backgroundColor: "#ffffff",
     padding: 18,
@@ -217,94 +170,37 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     elevation: 3,
   },
-
   postMeta: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 10,
+    alignItems: "center",
   },
-
-  authorText: { fontSize: 26, color: "#1877f2", fontWeight: "bold" },
-  dateText: { fontSize: 12, color: "#65676b", marginTop: 2 },
+  authorAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginRight: 8,
+  },
+  authorText: {
+    fontSize: 16,
+    color: "#1877f2",
+    fontWeight: "bold",
+  },
+  dateText: {
+    fontSize: 12,
+    color: "#65676b",
+    marginTop: 2,
+  },
   postTitle: {
     fontSize: 20,
     fontWeight: "bold",
     color: "#050505",
     marginBottom: 8,
   },
-
   postDescription: {
     fontSize: 16,
     color: "#1c1e21",
     lineHeight: 24,
-    marginBottom: 15,
   },
-
-  commentSection: {
-    borderTopWidth: 1,
-    borderTopColor: "#e4e6eb",
-    paddingTop: 10,
-  },
-
-  commentHeader: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#65676b",
-    marginBottom: 8,
-  },
-
-  commentItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 10,
-    backgroundColor: "#f0f2f5",
-    padding: 10,
-    borderRadius: 12,
-  },
-
-  commentBody: {
-    flex: 1,
-    marginRight: 10,
-  },
-
-  commentAuthor: {
-    fontWeight: "bold",
-    color: "#1c1e21",
-  },
-
-  commentText: {
-    color: "#1c1e21",
-    lineHeight: 20,
-  },
-
-  commentTime: {
-    fontWeight: "normal",
-    fontSize: 12,
-    color: "#65676b",
-    marginTop: 2,
-  },
-
-  commentInputRow: {
-    flexDirection: "row",
-    marginTop: 10,
-    alignItems: "center",
-  },
-  commentInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 6,
-    backgroundColor: "#f0f2f5",
-  },
-  commentBtn: {
-    marginLeft: 10,
-    backgroundColor: "#e4e6eb",
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  commentBtnText: { fontWeight: "bold", color: "#050505" },
 });
